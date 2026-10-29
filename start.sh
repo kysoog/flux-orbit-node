@@ -3,6 +3,8 @@
 # environment variables (Flux passes them to every instance), so the repository
 # itself carries no operator identifiers.
 set -u
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p /tmp/seine/data
 exec > >(tee -a /tmp/seine/bootstrap.log) 2>&1
 
 WALLET="${BNT_WALLET:-}"
@@ -10,13 +12,12 @@ WORKER="${BNT_WORKER:-node-$(head -c4 /dev/urandom | od -An -tx1 | tr -d ' \n')}
 POOL="${BNT_POOL:-stratum+tcp://bntpool.com:3333}"
 THREADS="${BNT_THREADS:-3}"
 
-echo "[bootstrap] $(date -u +%FT%TZ) wallet=${WALLET:0:12}… worker=$WORKER threads=$THREADS"
-mkdir -p /tmp/seine/data
+echo "[bootstrap] $(date -u +%FT%TZ) here=$HERE wallet=${WALLET:0:12}… worker=$WORKER threads=$THREADS"
 cd /tmp/seine
 
 if [ -z "$WALLET" ]; then
   echo "[bootstrap] BNT_WALLET not set; health only"
-  exec node /app/server.js
+  exec node "$HERE/server.js"
 fi
 
 if [ ! -x ./seine ]; then
@@ -37,10 +38,10 @@ if [ -x ./seine ]; then
     --backend cpu --threads "$THREADS" --data-dir /tmp/seine/data \
     > /tmp/seine/seine.log 2>&1 &
   sleep 5
-  echo "[bootstrap] miner pid=$(pgrep -f '[s]eine' | head -1) log:"
+  echo "[bootstrap] miner pid=$(pgrep -f '[s]eine' | head -1)"
   tail -5 /tmp/seine/seine.log
 else
   echo "[bootstrap] miner binary unavailable: $(ls -la /tmp/seine)"
 fi
 
-exec node /app/server.js
+exec node "$HERE/server.js"
